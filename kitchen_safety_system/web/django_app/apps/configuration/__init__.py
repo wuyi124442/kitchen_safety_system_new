@@ -1,0 +1,1 @@
+# Configuration app for system settings management

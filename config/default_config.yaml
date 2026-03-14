@@ -1,0 +1,78 @@
+# 厨房安全检测系统默认配置文件
+
+# 检测相关配置
+detection:
+  confidence_threshold: 0.5      # 检测置信度阈值
+  nms_threshold: 0.4            # 非极大值抑制阈值
+  detection_fps: 15             # 检测帧率
+
+# 风险监控配置
+risk_monitoring:
+  stove_distance_threshold: 2.0  # 灶台距离阈值 (米)
+  unattended_time_threshold: 300 # 无人看管时间阈值 (秒)
+  fall_confidence_threshold: 0.8 # 跌倒检测置信度阈值
+
+# 报警配置
+alerts:
+  alert_cooldown_time: 30       # 报警冷却时间 (秒)
+  enable_sound_alert: true      # 启用声音报警
+  enable_email_alert: true      # 启用邮件报警
+  enable_sms_alert: false       # 启用短信报警
+
+# 视频配置
+video:
+  input_source: "0"             # 视频输入源 (摄像头ID或文件路径)
+  resolution: [640, 480]        # 视频分辨率
+  fps: 30                       # 视频帧率
+
+# 性能配置
+performance:
+  max_cpu_usage: 80.0           # 最大CPU使用率 (%)
+  max_memory_usage: 70.0        # 最大内存使用率 (%)
+
+# 数据库配置
+database:
+  host: "localhost"
+  port: 5432
+  name: "kitchen_safety"
+  user: "kitchen_user"
+  password: "kitchen_pass"
+
+# Redis配置
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  password: null
+
+# Django配置
+django:
+  secret_key: "your-secret-key-here"
+  debug: false
+  allowed_hosts: ["localhost", "127.0.0.1"]
+
+# 邮件配置
+email:
+  smtp_server: "smtp.gmail.com"
+  smtp_port: 587
+  username: ""
+  password: ""
+  use_tls: true
+
+# 短信配置 (Twilio)
+sms:
+  account_sid: ""
+  auth_token: ""
+  from_number: ""
+
+# 模型文件路径
+models:
+  yolo_model: "models/yolo_kitchen.pt"
+  pose_model: "models/pose_model.pt"
+
+# 日志配置
+logging:
+  level: "INFO"
+  max_file_size: "10MB"
+  backup_count: 5
+  log_directory: "logs"

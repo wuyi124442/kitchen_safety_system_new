@@ -1,0 +1,212 @@
+# 厨房安全检测系统 Docker Compose 配置
+# 版本: 2.0
+# 更新日期: 2024
+
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:14-alpine
+    container_name: kitchen_safety_postgres
+    environment:
+      POSTGRES_DB: kitchen_safety
+      POSTGRES_USER: kitchen_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kitchen_pass}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - kitchen_safety_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kitchen_user -d kitchen_safety"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: kitchen_safety_redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - kitchen_safety_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # 厨房安全检测系统主服务
+  kitchen_safety:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: kitchen_safety_main
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=kitchen_safety
+      - DATABASE_USER=kitchen_user
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-kitchen_pass}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-your-secret-key-change-in-production}
+      - DJANGO_DEBUG=${DJANGO_DEBUG:-false}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./logs:/app/logs
+      - ./config:/app/config:ro
+      - ./yolo:/app/yolo:ro
+      - app_data:/app/data
+      # 摄像头设备映射 (根据需要启用)
+      # - /dev/video0:/dev/video0
+    ports:
+      - "${MAIN_APP_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - kitchen_safety_network
+    restart: unless-stopped
+    # 摄像头设备访问 (根据需要启用)
+    # devices:
+    #   - /dev/video0:/dev/video0
+    # privileged: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+  # Django Web 服务
+  web:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: kitchen_safety_web
+    command: web
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=kitchen_safety
+      - DATABASE_USER=kitchen_user
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-kitchen_pass}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-your-secret-key-change-in-production}
+      - DJANGO_DEBUG=${DJANGO_DEBUG:-false}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./logs:/app/logs
+      - ./config:/app/config:ro
+      - web_static:/app/kitchen_safety_system/web/static
+      - web_media:/app/kitchen_safety_system/web/media
+    ports:
+      - "${WEB_APP_PORT:-8001}:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - kitchen_safety_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/admin/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  # Nginx 反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: kitchen_safety_nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - web_static:/var/www/static:ro
+      - web_media:/var/www/media:ro
+      - nginx_logs:/var/log/nginx
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    depends_on:
+      - kitchen_safety
+      - web
+    networks:
+      - kitchen_safety_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  app_data:
+    driver: local
+  web_static:
+    driver: local
+  web_media:
+    driver: local
+  nginx_logs:
+    driver: local
+
+networks:
+  kitchen_safety_network:
+    driver: bridge

@@ -1,0 +1,152 @@
+# YOLO检测器配置文件
+
+yolo_detector:
+  # 模型配置
+  model:
+    # 模型文件路径（相对于项目根目录）
+    # 可选值: yolo/yolo11n.pt, yolo/yolov8n.pt, 或自定义路径
+    path: "yolo/yolo11n.pt"
+    
+    # 推理设备 ('auto', 'cpu', 'cuda')
+    device: "auto"
+    
+    # 是否使用半精度推理（FP16）
+    half_precision: false
+  
+  # 检测参数
+  detection:
+    # 置信度阈值 (0.0-1.0)
+    confidence_threshold: 0.5
+    
+    # IoU阈值用于非极大值抑制 (0.0-1.0)
+    iou_threshold: 0.45
+    
+    # 最小检测框尺寸（像素）
+    min_box_size: 10
+    
+    # 最大检测数量
+    max_detections: 100
+  
+  # 类别映射配置
+  class_mapping:
+    # YOLO类别到系统检测类型的映射
+    person: "person"
+    fire: "flame"
+    stove: "stove"
+    oven: "stove"
+    microwave: "stove"
+    toaster: "stove"
+    
+    # 支持的COCO类别
+    coco_classes:
+      - "person"      # 人员
+      - "oven"        # 烤箱
+      - "microwave"   # 微波炉
+      - "toaster"     # 烤面包机
+      - "refrigerator" # 冰箱（可选）
+      - "sink"        # 水槽（可选）
+  
+  # 性能优化
+  performance:
+    # 输入图像尺寸 (width, height)
+    input_size: [640, 640]
+    
+    # 批处理大小
+    batch_size: 1
+    
+    # 是否启用TensorRT优化（需要TensorRT支持）
+    tensorrt: false
+    
+    # 是否启用ONNX优化
+    onnx: false
+  
+  # 可视化配置
+  visualization:
+    # 边界框颜色 (BGR格式)
+    colors:
+      person: [0, 255, 0]    # 绿色
+      stove: [255, 0, 0]     # 蓝色
+      flame: [0, 0, 255]     # 红色
+    
+    # 边界框线宽
+    box_thickness: 2
+    
+    # 文本字体大小
+    font_scale: 0.6
+    
+    # 文本厚度
+    text_thickness: 1
+    
+    # 是否显示置信度
+    show_confidence: true
+    
+    # 是否显示类别标签
+    show_labels: true
+  
+  # 日志配置
+  logging:
+    # 日志级别 (DEBUG, INFO, WARNING, ERROR)
+    level: "INFO"
+    
+    # 性能统计记录间隔（检测次数）
+    stats_interval: 100
+    
+    # 是否记录详细的检测结果
+    log_detections: false
+
+# 厨房安全特定配置
+kitchen_safety:
+  # 目标检测要求
+  requirements:
+    # 最小检测精度要求（mAP）
+    min_map: 0.85
+    
+    # 最小处理帧率要求（FPS）
+    min_fps: 15
+    
+    # 支持的检测类型
+    supported_types:
+      - "person"
+      - "stove" 
+      - "flame"
+  
+  # 风险评估参数
+  risk_assessment:
+    # 人员与灶台的安全距离（像素）
+    safe_distance: 100
+    
+    # 无人看管时间阈值（秒）
+    unattended_threshold: 30
+    
+    # 跌倒检测置信度阈值
+    fall_confidence_threshold: 0.8
+
+# 测试和验证配置
+testing:
+  # 测试数据集路径
+  test_dataset: "yolo/fire_fall_dataset"
+  
+  # 基准测试配置
+  benchmark:
+    # 测试图像尺寸
+    test_sizes:
+      - [320, 240]
+      - [640, 480]
+      - [1280, 720]
+    
+    # 每个尺寸的测试次数
+    iterations: 50
+    
+    # 预热次数
+    warmup_iterations: 5
+  
+  # 验证配置
+  validation:
+    # 验证数据集路径
+    val_dataset: "yolo/fire_fall_dataset/images/val"
+    
+    # 验证批次大小
+    batch_size: 16
+    
+    # 是否保存验证结果
+    save_results: true

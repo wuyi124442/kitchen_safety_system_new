@@ -1,0 +1,388 @@
+{% extends 'base.html' %}
+
+{% block title %}系统配置 - 厨房安全检测系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4><i class="fas fa-cog"></i> 系统配置</h4>
+                <div>
+                    <button class="btn btn-primary" onclick="saveAllConfigs()">
+                        <i class="fas fa-save"></i> 保存所有配置
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- 检测设置 -->
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="fas fa-eye"></i> 检测设置</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="detectionForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">跌倒检测置信度阈值</label>
+                                        <input type="range" class="form-range" min="0.1" max="1.0" step="0.1" 
+                                               value="0.8" id="fallConfidence">
+                                        <div class="d-flex justify-content-between">
+                                            <small>0.1</small>
+                                            <small id="fallConfidenceValue">0.8</small>
+                                            <small>1.0</small>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">灶台安全距离 (米)</label>
+                                        <input type="number" class="form-control" value="2.0" 
+                                               min="0.5" max="5.0" step="0.1" id="stoveDistance">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">无人看管时间阈值 (秒)</label>
+                                        <input type="number" class="form-control" value="30" 
+                                               min="10" max="300" id="unattendedTime">
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 报警设置 -->
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="fas fa-bell"></i> 报警设置</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="alertForm">
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   id="emailEnabled" checked>
+                                            <label class="form-check-label" for="emailEnabled">
+                                                启用邮件通知
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   id="smsEnabled">
+                                            <label class="form-check-label" for="smsEnabled">
+                                                启用短信通知
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   id="soundEnabled" checked>
+                                            <label class="form-check-label" for="soundEnabled">
+                                                启用声音报警
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">报警邮箱</label>
+                                        <input type="email" class="form-control" 
+                                               placeholder="admin@example.com" id="alertEmail">
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <!-- 视频设置 -->
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="fas fa-video"></i> 视频设置</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="videoForm">
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   id="saveClips" checked>
+                                            <label class="form-check-label" for="saveClips">
+                                                保存报警视频片段
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">视频片段时长 (秒)</label>
+                                        <input type="number" class="form-control" value="10" 
+                                               min="5" max="60" id="clipDuration">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">最大存储天数</label>
+                                        <input type="number" class="form-control" value="30" 
+                                               min="1" max="365" id="maxStorageDays">
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 视频上传测试 -->
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="fas fa-upload"></i> 视频上传测试</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="videoUploadForm" enctype="multipart/form-data">
+                                    {% csrf_token %}
+                                    <div class="mb-3">
+                                        <label class="form-label">选择测试视频</label>
+                                        <input type="file" class="form-control" id="videoFile" 
+                                               accept="video/*" required>
+                                        <div class="form-text">
+                                            支持格式: MP4, AVI, MOV (最大100MB)
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">测试描述</label>
+                                        <textarea class="form-control" id="testDescription" 
+                                                  rows="3" placeholder="描述这个测试视频的内容..."></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-upload"></i> 上传并分析
+                                    </button>
+                                </form>
+                                
+                                <!-- 上传进度 -->
+                                <div id="uploadProgress" class="mt-3" style="display: none;">
+                                    <div class="progress">
+                                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                    <small class="text-muted">上传中...</small>
+                                </div>
+                                
+                                <!-- 分析结果 -->
+                                <div id="analysisResult" class="mt-3" style="display: none;">
+                                    <div class="alert alert-info">
+                                        <h6><i class="fas fa-chart-line"></i> 分析结果</h6>
+                                        <div id="resultContent"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 更新滑块值显示
+document.getElementById('fallConfidence').addEventListener('input', function() {
+    document.getElementById('fallConfidenceValue').textContent = this.value;
+});
+
+// 保存所有配置
+function saveAllConfigs() {
+    const configs = {
+        detection: {
+            fall_confidence: parseFloat(document.getElementById('fallConfidence').value),
+            stove_distance: parseFloat(document.getElementById('stoveDistance').value),
+            unattended_time: parseInt(document.getElementById('unattendedTime').value)
+        },
+        alerts: {
+            email_enabled: document.getElementById('emailEnabled').checked,
+            sms_enabled: document.getElementById('smsEnabled').checked,
+            sound_enabled: document.getElementById('soundEnabled').checked,
+            alert_email: document.getElementById('alertEmail').value
+        },
+        video: {
+            save_clips: document.getElementById('saveClips').checked,
+            clip_duration: parseInt(document.getElementById('clipDuration').value),
+            max_storage_days: parseInt(document.getElementById('maxStorageDays').value)
+        }
+    };
+    
+    fetch('/config/api/configs/update/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(configs)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('配置保存成功！');
+        } else {
+            alert('配置保存失败: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('保存配置时发生错误: ' + error);
+    });
+}
+
+// 视频上传处理
+document.getElementById('videoUploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const fileInput = document.getElementById('videoFile');
+    const description = document.getElementById('testDescription').value;
+    
+    if (!fileInput.files[0]) {
+        alert('请选择视频文件');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    if (file.size > 100 * 1024 * 1024) { // 100MB
+        alert('文件大小不能超过100MB');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('video', file);
+    formData.append('description', description);
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    // 显示进度条
+    const progressDiv = document.getElementById('uploadProgress');
+    const progressBar = progressDiv.querySelector('.progress-bar');
+    const resultDiv = document.getElementById('analysisResult');
+    
+    progressDiv.style.display = 'block';
+    resultDiv.style.display = 'none';
+    
+    // 上传文件
+    const xhr = new XMLHttpRequest();
+    
+    xhr.upload.addEventListener('progress', function(e) {
+        if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            progressBar.style.width = percentComplete + '%';
+            progressBar.textContent = Math.round(percentComplete) + '%';
+        }
+    });
+    
+    xhr.addEventListener('load', function() {
+        progressDiv.style.display = 'none';
+        
+        if (xhr.status === 200) {
+            const response = JSON.parse(xhr.responseText);
+            if (response.success) {
+                showAnalysisResult(response.data);
+            } else {
+                alert('上传失败: ' + response.message);
+            }
+        } else {
+            alert('上传失败，请重试');
+        }
+    });
+    
+    xhr.addEventListener('error', function() {
+        progressDiv.style.display = 'none';
+        alert('上传过程中发生错误');
+    });
+    
+    xhr.open('POST', '/config/api/upload-video/');
+    xhr.send(formData);
+});
+
+function showAnalysisResult(data) {
+    const resultDiv = document.getElementById('analysisResult');
+    const contentDiv = document.getElementById('resultContent');
+    
+    contentDiv.innerHTML = `
+        <p><strong>文件名:</strong> ${data.filename}</p>
+        <p><strong>文件大小:</strong> ${data.file_size}</p>
+        <p><strong>视频时长:</strong> ${data.duration || '未知'}</p>
+        <p><strong>分辨率:</strong> ${data.resolution || '未知'}</p>
+        <p><strong>上传时间:</strong> ${new Date(data.upload_time).toLocaleString()}</p>
+        <p><strong>状态:</strong> <span class="badge bg-success">上传成功</span></p>
+        <div class="mt-2">
+            <a href="${data.file_url}" class="btn btn-sm btn-outline-primary" target="_blank">
+                <i class="fas fa-play"></i> 播放视频
+            </a>
+            <button class="btn btn-sm btn-outline-success" onclick="startAnalysis('${data.file_id}')">
+                <i class="fas fa-search"></i> 开始分析
+            </button>
+        </div>
+    `;
+    
+    resultDiv.style.display = 'block';
+}
+
+function startAnalysis(fileId) {
+    alert('视频分析功能正在开发中，敬请期待！');
+    // TODO: 实现视频分析功能
+}
+
+// 页面加载时获取当前配置
+document.addEventListener('DOMContentLoaded', function() {
+    loadCurrentConfigs();
+});
+
+function loadCurrentConfigs() {
+    fetch('/config/api/configs/')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.data) {
+            const configs = data.data;
+            
+            // 加载检测设置
+            if (configs.detection) {
+                if (configs.detection.fall_confidence) {
+                    document.getElementById('fallConfidence').value = configs.detection.fall_confidence;
+                    document.getElementById('fallConfidenceValue').textContent = configs.detection.fall_confidence;
+                }
+                if (configs.detection.stove_distance) {
+                    document.getElementById('stoveDistance').value = configs.detection.stove_distance;
+                }
+                if (configs.detection.unattended_time) {
+                    document.getElementById('unattendedTime').value = configs.detection.unattended_time;
+                }
+            }
+            
+            // 加载报警设置
+            if (configs.alerts) {
+                if (configs.alerts.email_enabled !== undefined) {
+                    document.getElementById('emailEnabled').checked = configs.alerts.email_enabled;
+                }
+                if (configs.alerts.sms_enabled !== undefined) {
+                    document.getElementById('smsEnabled').checked = configs.alerts.sms_enabled;
+                }
+                if (configs.alerts.sound_enabled !== undefined) {
+                    document.getElementById('soundEnabled').checked = configs.alerts.sound_enabled;
+                }
+                if (configs.alerts.alert_email) {
+                    document.getElementById('alertEmail').value = configs.alerts.alert_email;
+                }
+            }
+            
+            // 加载视频设置
+            if (configs.video) {
+                if (configs.video.save_clips !== undefined) {
+                    document.getElementById('saveClips').checked = configs.video.save_clips;
+                }
+                if (configs.video.clip_duration) {
+                    document.getElementById('clipDuration').value = configs.video.clip_duration;
+                }
+                if (configs.video.max_storage_days) {
+                    document.getElementById('maxStorageDays').value = configs.video.max_storage_days;
+                }
+            }
+        }
+    })
+    .catch(error => {
+        console.error('加载配置失败:', error);
+    });
+}
+</script>
+{% endblock %}

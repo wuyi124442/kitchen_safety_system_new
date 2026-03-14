@@ -1,0 +1,420 @@
+{% extends 'base.html' %}
+
+{% block title %}日志查询 - 厨房安全检测系统{% endblock %}
+
+{% block extra_css %}
+<style>
+    .log-entry {
+        border-left: 4px solid #dee2e6;
+        padding: 10px;
+        margin-bottom: 10px;
+        background-color: #f8f9fa;
+    }
+    .log-entry.DEBUG { border-left-color: #6c757d; }
+    .log-entry.INFO { border-left-color: #0dcaf0; }
+    .log-entry.WARNING { border-left-color: #ffc107; }
+    .log-entry.ERROR { border-left-color: #dc3545; }
+    .log-entry.CRITICAL { border-left-color: #6f42c1; }
+    
+    .log-timestamp {
+        font-size: 0.9em;
+        color: #6c757d;
+    }
+    
+    .log-level {
+        font-weight: bold;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.8em;
+    }
+    
+    .log-level.DEBUG { background-color: #6c757d; color: white; }
+    .log-level.INFO { background-color: #0dcaf0; color: white; }
+    .log-level.WARNING { background-color: #ffc107; color: black; }
+    .log-level.ERROR { background-color: #dc3545; color: white; }
+    .log-level.CRITICAL { background-color: #6f42c1; color: white; }
+    
+    .search-form {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-search"></i> 日志查询</h2>
+            <div>
+                <a href="{% url 'logs:log_monitor' %}" class="btn btn-info">
+                    <i class="fas fa-eye"></i> 实时监控
+                </a>
+                <button type="button" class="btn btn-success" onclick="exportLogs()">
+                    <i class="fas fa-download"></i> 导出日志
+                </button>
+            </div>
+        </div>
+        
+        <!-- 搜索表单 -->
+        <div class="search-form">
+            <form id="searchForm">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="startDate" class="form-label">开始时间</label>
+                        <input type="datetime-local" class="form-control" id="startDate" name="start_date">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="endDate" class="form-label">结束时间</label>
+                        <input type="datetime-local" class="form-control" id="endDate" name="end_date">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="level" class="form-label">日志级别</label>
+                        <select class="form-select" id="level" name="level">
+                            <option value="">全部</option>
+                            {% for level_code, level_name in level_choices %}
+                            <option value="{{ level_code }}">{{ level_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="logType" class="form-label">日志类型</label>
+                        <select class="form-select" id="logType" name="log_type">
+                            <option value="">全部</option>
+                            {% for type_code, type_name in type_choices %}
+                            <option value="{{ type_code }}">{{ type_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="search" class="form-label">关键词</label>
+                        <input type="text" class="form-control" id="search" name="search" placeholder="搜索关键词">
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> 查询
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                            <i class="fas fa-undo"></i> 重置
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <!-- 加载指示器 -->
+        <div id="loading" class="text-center" style="display: none;">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+        </div>
+        
+        <!-- 日志列表 -->
+        <div id="logResults">
+            <!-- 日志条目将通过JavaScript动态加载 -->
+        </div>
+        
+        <!-- 分页 -->
+        <nav id="pagination" style="display: none;">
+            <ul class="pagination justify-content-center">
+                <!-- 分页按钮将通过JavaScript动态生成 -->
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<!-- 导出模态框 -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">导出日志</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="exportForm">
+                    <div class="mb-3">
+                        <label for="exportFormat" class="form-label">导出格式</label>
+                        <select class="form-select" id="exportFormat" name="format">
+                            <option value="csv">CSV</option>
+                            <option value="json">JSON</option>
+                            <option value="txt">TXT</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="exportStartDate" class="form-label">开始时间</label>
+                        <input type="datetime-local" class="form-control" id="exportStartDate" name="start_date">
+                    </div>
+                    <div class="mb-3">
+                        <label for="exportEndDate" class="form-label">结束时间</label>
+                        <input type="datetime-local" class="form-control" id="exportEndDate" name="end_date">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="doExport()">导出</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let currentParams = {};
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 设置默认时间范围（最近24小时）
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    
+    document.getElementById('startDate').value = formatDateTimeLocal(yesterday);
+    document.getElementById('endDate').value = formatDateTimeLocal(now);
+    
+    // 加载初始数据
+    searchLogs();
+});
+
+// 搜索表单提交
+document.getElementById('searchForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    currentPage = 1;
+    searchLogs();
+});
+
+// 搜索日志
+function searchLogs(page = 1) {
+    const formData = new FormData(document.getElementById('searchForm'));
+    const params = new URLSearchParams();
+    
+    for (let [key, value] of formData.entries()) {
+        if (value) {
+            params.append(key, value);
+        }
+    }
+    
+    params.append('page', page);
+    currentParams = params;
+    
+    showLoading(true);
+    
+    fetch(`/logs/api/logs/?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            displayLogs(data.results);
+            displayPagination(data);
+            showLoading(false);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showLoading(false);
+            alert('加载日志失败，请重试');
+        });
+}
+
+// 显示日志
+function displayLogs(logs) {
+    const container = document.getElementById('logResults');
+    
+    if (!logs || logs.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">没有找到匹配的日志记录</div>';
+        return;
+    }
+    
+    let html = '';
+    logs.forEach(log => {
+        html += `
+            <div class="log-entry ${log.level}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="log-level ${log.level}">${log.level}</span>
+                            <span class="badge bg-secondary ms-2">${getLogTypeDisplay(log.log_type)}</span>
+                            <span class="log-timestamp ms-2">${formatDateTime(log.timestamp)}</span>
+                        </div>
+                        <div class="log-message">${escapeHtml(log.message)}</div>
+                        ${log.module ? `<small class="text-muted">模块: ${log.module}</small>` : ''}
+                        ${log.function ? `<small class="text-muted ms-2">函数: ${log.function}</small>` : ''}
+                        ${log.line_number ? `<small class="text-muted ms-2">行号: ${log.line_number}</small>` : ''}
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="showLogDetail(${log.id})">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// 显示分页
+function displayPagination(data) {
+    const container = document.getElementById('pagination');
+    
+    if (!data.next && !data.previous) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'block';
+    
+    let html = '<ul class="pagination justify-content-center">';
+    
+    // 上一页
+    if (data.previous) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="searchLogs(${currentPage - 1})">上一页</a></li>`;
+    }
+    
+    // 页码（简化版本）
+    html += `<li class="page-item active"><span class="page-link">${currentPage}</span></li>`;
+    
+    // 下一页
+    if (data.next) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="searchLogs(${currentPage + 1})">下一页</a></li>`;
+    }
+    
+    html += '</ul>';
+    container.innerHTML = html;
+    
+    if (data.next) currentPage++;
+}
+
+// 显示/隐藏加载指示器
+function showLoading(show) {
+    document.getElementById('loading').style.display = show ? 'block' : 'none';
+}
+
+// 重置表单
+function resetForm() {
+    document.getElementById('searchForm').reset();
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    
+    document.getElementById('startDate').value = formatDateTimeLocal(yesterday);
+    document.getElementById('endDate').value = formatDateTimeLocal(now);
+    
+    currentPage = 1;
+    searchLogs();
+}
+
+// 导出日志
+function exportLogs() {
+    // 复制当前搜索条件到导出表单
+    const formData = new FormData(document.getElementById('searchForm'));
+    document.getElementById('exportStartDate').value = formData.get('start_date') || '';
+    document.getElementById('exportEndDate').value = formData.get('end_date') || '';
+    
+    new bootstrap.Modal(document.getElementById('exportModal')).show();
+}
+
+// 执行导出
+function doExport() {
+    const formData = new FormData(document.getElementById('exportForm'));
+    const params = new URLSearchParams();
+    
+    for (let [key, value] of formData.entries()) {
+        if (value) {
+            params.append(key, value);
+        }
+    }
+    
+    window.open(`/logs/api/logs/export/?${params.toString()}`);
+    bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
+}
+
+// 显示日志详情
+function showLogDetail(logId) {
+    fetch(`/logs/api/logs/${logId}/`)
+        .then(response => response.json())
+        .then(log => {
+            let detailHtml = `
+                <div class="log-detail">
+                    <h6>日志详情</h6>
+                    <table class="table table-sm">
+                        <tr><td><strong>ID:</strong></td><td>${log.id}</td></tr>
+                        <tr><td><strong>时间:</strong></td><td>${formatDateTime(log.timestamp)}</td></tr>
+                        <tr><td><strong>级别:</strong></td><td><span class="log-level ${log.level}">${log.level}</span></td></tr>
+                        <tr><td><strong>类型:</strong></td><td>${getLogTypeDisplay(log.log_type)}</td></tr>
+                        <tr><td><strong>消息:</strong></td><td>${escapeHtml(log.message)}</td></tr>
+                        ${log.module ? `<tr><td><strong>模块:</strong></td><td>${log.module}</td></tr>` : ''}
+                        ${log.function ? `<tr><td><strong>函数:</strong></td><td>${log.function}</td></tr>` : ''}
+                        ${log.line_number ? `<tr><td><strong>行号:</strong></td><td>${log.line_number}</td></tr>` : ''}
+                        ${log.additional_data ? `<tr><td><strong>附加数据:</strong></td><td><pre>${JSON.stringify(log.additional_data, null, 2)}</pre></td></tr>` : ''}
+                    </table>
+                </div>
+            `;
+            
+            // 创建模态框显示详情
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">日志详情</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">${detailHtml}</div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+            
+            // 模态框关闭后移除元素
+            modal.addEventListener('hidden.bs.modal', function() {
+                document.body.removeChild(modal);
+            });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('加载日志详情失败');
+        });
+}
+
+// 工具函数
+function formatDateTime(dateString) {
+    return new Date(dateString).toLocaleString('zh-CN');
+}
+
+function formatDateTimeLocal(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function getLogTypeDisplay(type) {
+    const typeMap = {
+        'SYSTEM': '系统日志',
+        'DETECTION': '检测日志',
+        'ALERT': '报警日志',
+        'USER': '用户操作日志',
+        'ERROR': '错误日志'
+    };
+    return typeMap[type] || type;
+}
+</script>
+{% endblock %}

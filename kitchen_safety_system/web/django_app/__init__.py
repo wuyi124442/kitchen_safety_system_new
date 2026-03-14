@@ -1,0 +1,1 @@
+# Django Web Application for Kitchen Safety Detection System

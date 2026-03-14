@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+
+{% block title %}报警详情 - 厨房安全检测系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4><i class="fas fa-exclamation-triangle"></i> 报警详情</h4>
+            <a href="{% url 'alerts:list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> 返回列表
+            </a>
+        </div>
+        
+        <div class="row">
+            <!-- 基本信息 -->
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>基本信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td><strong>报警类型:</strong></td>
+                                        <td><span class="badge bg-primary">{{ alert.get_alert_type_display }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>严重程度:</strong></td>
+                                        <td>
+                                            {% if alert.severity == 'critical' %}
+                                                <span class="badge bg-danger">严重</span>
+                                            {% elif alert.severity == 'high' %}
+                                                <span class="badge bg-warning">高</span>
+                                            {% elif alert.severity == 'medium' %}
+                                                <span class="badge bg-info">中</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">低</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>状态:</strong></td>
+                                        <td>
+                                            {% if alert.status == 'active' %}
+                                                <span class="badge bg-danger">活跃</span>
+                                            {% elif alert.status == 'acknowledged' %}
+                                                <span class="badge bg-warning">已确认</span>
+                                            {% elif alert.status == 'resolved' %}
+                                                <span class="badge bg-success">已解决</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">误报</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>检测置信度:</strong></td>
+                                        <td>
+                                            <div class="progress" style="height: 20px; width: 200px;">
+                                                <div class="progress-bar" role="progressbar" 
+                                                     style="width: {{ alert.detection_confidence|floatformat:0 }}%">
+                                                    {{ alert.detection_confidence|floatformat:1 }}%
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td><strong>发生时间:</strong></td>
+                                        <td>{{ alert.created_at|date:'Y-m-d H:i:s' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>位置:</strong></td>
+                                        <td>{{ alert.location|default:'未知' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>摄像头:</strong></td>
+                                        <td>{{ alert.camera_id|default:'未知' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>持续时间:</strong></td>
+                                        <td>{{ alert.duration }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <h6>描述</h6>
+                                <p class="text-muted">{{ alert.description }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 处理记录 -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>处理记录</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if alert.acknowledged_at %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-check-circle"></i>
+                            <strong>已确认</strong> - {{ alert.acknowledged_by }} 于 {{ alert.acknowledged_at|date:'Y-m-d H:i:s' }}
+                        </div>
+                        {% endif %}
+                        
+                        {% if alert.resolved_at %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-double"></i>
+                            <strong>已解决</strong> - {{ alert.resolved_by }} 于 {{ alert.resolved_at|date:'Y-m-d H:i:s' }}
+                            {% if alert.resolution_notes %}
+                            <br><small>备注: {{ alert.resolution_notes }}</small>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if alert.status == 'active' %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>待处理</strong> - 此报警尚未处理
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- 元数据 -->
+                {% if alert.metadata %}
+                <div class="card">
+                    <div class="card-header">
+                        <h5>技术详情</h5>
+                    </div>
+                    <div class="card-body">
+                        <pre class="bg-light p-3 rounded"><code>{{ alert.metadata|pprint }}</code></pre>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- 操作面板 -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>操作</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if alert.status == 'active' %}
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-warning" onclick="acknowledgeAlert()">
+                                <i class="fas fa-check"></i> 确认报警
+                            </button>
+                            <button class="btn btn-success" onclick="resolveAlert()">
+                                <i class="fas fa-check-double"></i> 解决报警
+                            </button>
+                            <button class="btn btn-secondary" onclick="markFalsePositive()">
+                                <i class="fas fa-times"></i> 标记误报
+                            </button>
+                        </div>
+                        {% endif %}
+                        
+                        <hr>
+                        
+                        <div class="d-grid gap-2">
+                            {% if alert.video_clip_path %}
+                            <a href="{{ alert.video_clip_path }}" class="btn btn-outline-primary" target="_blank">
+                                <i class="fas fa-video"></i> 查看视频
+                            </a>
+                            {% endif %}
+                            
+                            {% if alert.screenshot_path %}
+                            <a href="{{ alert.screenshot_path }}" class="btn btn-outline-info" target="_blank">
+                                <i class="fas fa-image"></i> 查看截图
+                            </a>
+                            {% endif %}
+                            
+                            <button class="btn btn-outline-secondary" onclick="exportAlert()">
+                                <i class="fas fa-download"></i> 导出报告
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 相关报警 -->
+                {% if related_alerts %}
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5>相关报警</h5>
+                    </div>
+                    <div class="card-body">
+                        {% for related in related_alerts %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <small class="text-muted">{{ related.created_at|date:'m-d H:i' }}</small><br>
+                                <span class="badge bg-primary">{{ related.get_alert_type_display }}</span>
+                            </div>
+                            <a href="{% url 'alerts:detail' related.pk %}" class="btn btn-sm btn-outline-primary">
+                                查看
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function acknowledgeAlert() {
+    if (confirm('确认要确认这个报警吗？')) {
+        fetch(`/alerts/{{ alert.pk }}/action/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({action: 'acknowledge'})
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        });
+    }
+}
+
+function resolveAlert() {
+    const notes = prompt('请输入解决备注（可选）：');
+    if (notes !== null) {
+        fetch(`/alerts/{{ alert.pk }}/action/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({action: 'resolve', notes: notes})
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        });
+    }
+}
+
+function markFalsePositive() {
+    if (confirm('确认要标记为误报吗？')) {
+        fetch(`/alerts/{{ alert.pk }}/action/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({action: 'false_positive'})
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        });
+    }
+}
+
+function exportAlert() {
+    window.open(`/alerts/api/{{ alert.pk }}/export/`, '_blank');
+}
+</script>
+{% endblock %}

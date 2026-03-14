@@ -1,0 +1,420 @@
+{% extends 'base.html' %}
+
+{% block title %}个人设置 - 厨房安全检测系统{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-card {
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        border: none;
+    }
+    
+    .profile-header {
+        background: linear-gradient(135deg, #2c3e50, #3498db);
+        color: white;
+        border-radius: 15px 15px 0 0;
+        padding: 2rem 1.5rem;
+    }
+    
+    .profile-avatar {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+    }
+    
+    .section-title {
+        color: #2c3e50;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #3498db;
+        box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+    }
+    
+    .info-card {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #3498db, #2c3e50);
+        border: none;
+        border-radius: 10px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+    }
+    
+    .btn-secondary {
+        border-radius: 10px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+    }
+    
+    .form-check-input:checked {
+        background-color: #3498db;
+        border-color: #3498db;
+    }
+    
+    .readonly-field {
+        background-color: #f8f9fa;
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 mx-auto">
+        <div class="card profile-card">
+            <div class="profile-header text-center">
+                <div class="profile-avatar">
+                    <i class="fas fa-user fa-2x"></i>
+                </div>
+                <h3>{{ user.first_name|default:user.username }}</h3>
+                <p class="mb-0 opacity-75">{{ user.get_role_display|default:"系统用户" }}</p>
+            </div>
+            
+            <div class="card-body p-4">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- 基本信息 -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5 class="section-title">
+                                <i class="fas fa-user-circle me-2"></i>基本信息
+                            </h5>
+                            <div class="mb-3">
+                                <label for="username" class="form-label">
+                                    <i class="fas fa-user me-2"></i>用户名
+                                </label>
+                                <input type="text" class="form-control readonly-field" id="username" name="username" 
+                                       value="{{ user.username }}" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label for="email" class="form-label">
+                                    <i class="fas fa-envelope me-2"></i>邮箱地址
+                                </label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       value="{{ user.email }}" placeholder="请输入邮箱地址">
+                            </div>
+                            <div class="mb-3">
+                                <label for="first_name" class="form-label">
+                                    <i class="fas fa-id-card me-2"></i>真实姓名
+                                </label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" 
+                                       value="{{ user.first_name }}" placeholder="请输入真实姓名">
+                            </div>
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">
+                                    <i class="fas fa-phone me-2"></i>联系电话
+                                </label>
+                                <input type="text" class="form-control" id="phone" name="phone" 
+                                       value="{{ user.phone|default:'' }}" placeholder="请输入联系电话">
+                            </div>
+                            <div class="mb-3">
+                                <label for="department" class="form-label">
+                                    <i class="fas fa-building me-2"></i>所属部门
+                                </label>
+                                <input type="text" class="form-control" id="department" name="department" 
+                                       value="{{ user.department|default:'' }}" placeholder="请输入所属部门">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5 class="section-title">
+                                <i class="fas fa-info-circle me-2"></i>账户信息
+                            </h5>
+                            <div class="info-card">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-user-tag me-2"></i>用户角色
+                                    </label>
+                                    <input type="text" class="form-control readonly-field" 
+                                           value="{{ user.get_role_display|default:'普通用户' }}" readonly>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-calendar-plus me-2"></i>注册时间
+                                    </label>
+                                    <input type="text" class="form-control readonly-field" 
+                                           value="{{ user.created_at|date:'Y年m月d日 H:i'|default:'未知' }}" readonly>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-clock me-2"></i>最后登录
+                                    </label>
+                                    <input type="text" class="form-control readonly-field" 
+                                           value="{{ user.last_login|date:'Y年m月d日 H:i'|default:'从未登录' }}" readonly>
+                                </div>
+                                <div class="mb-0">
+                                    <label class="form-label">
+                                        <i class="fas fa-check-circle me-2"></i>账户状态
+                                    </label>
+                                    <input type="text" class="form-control readonly-field" 
+                                           value="{% if user.is_active %}正常{% else %}已禁用{% endif %}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 通知设置 -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="section-title">
+                                <i class="fas fa-bell me-2"></i>通知设置
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="info-card">
+                                        <h6 class="mb-3">通知方式</h6>
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="notification_email" 
+                                                   name="notification_email" {% if user.profile.notification_email|default:True %}checked{% endif %}>
+                                            <label class="form-check-label" for="notification_email">
+                                                <i class="fas fa-envelope me-2"></i>邮件通知
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-0">
+                                            <input class="form-check-input" type="checkbox" id="notification_sms" 
+                                                   name="notification_sms" {% if user.profile.notification_sms|default:False %}checked{% endif %}>
+                                            <label class="form-check-label" for="notification_sms">
+                                                <i class="fas fa-sms me-2"></i>短信通知
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-card">
+                                        <h6 class="mb-3">界面设置</h6>
+                                        <div class="mb-0">
+                                            <label for="dashboard_refresh_interval" class="form-label">
+                                                <i class="fas fa-sync-alt me-2"></i>仪表板刷新间隔
+                                            </label>
+                                            <select class="form-select" id="dashboard_refresh_interval" name="dashboard_refresh_interval">
+                                                <option value="5" {% if user.profile.dashboard_refresh_interval == 5 %}selected{% endif %}>5秒</option>
+                                                <option value="10" {% if user.profile.dashboard_refresh_interval == 10 %}selected{% endif %}>10秒</option>
+                                                <option value="30" {% if user.profile.dashboard_refresh_interval == 30 or not user.profile.dashboard_refresh_interval %}selected{% endif %}>30秒</option>
+                                                <option value="60" {% if user.profile.dashboard_refresh_interval == 60 %}selected{% endif %}>1分钟</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 密码修改 -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="section-title">
+                                <i class="fas fa-key me-2"></i>修改密码
+                            </h5>
+                            <div class="info-card">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="old_password" class="form-label">
+                                                <i class="fas fa-lock me-2"></i>当前密码
+                                            </label>
+                                            <input type="password" class="form-control" id="old_password" name="old_password"
+                                                   placeholder="请输入当前密码">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="new_password1" class="form-label">
+                                                <i class="fas fa-key me-2"></i>新密码
+                                            </label>
+                                            <input type="password" class="form-control" id="new_password1" name="new_password1"
+                                                   placeholder="请输入新密码">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="new_password2" class="form-label">
+                                                <i class="fas fa-check-circle me-2"></i>确认新密码
+                                            </label>
+                                            <input type="password" class="form-control" id="new_password2" name="new_password2"
+                                                   placeholder="请再次输入新密码">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="alert alert-info mb-0">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>密码要求：</strong>至少8位字符，包含字母和数字，建议包含特殊字符以提高安全性。
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>保存设置
+                        </button>
+                        <a href="{% url 'monitoring:dashboard' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>返回仪表板
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 密码强度检查
+    const newPassword = document.getElementById('new_password1');
+    const confirmPassword = document.getElementById('new_password2');
+    
+    function checkPasswordStrength(password) {
+        let strength = 0;
+        if (password.length >= 8) strength++;
+        if (/[a-z]/.test(password)) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^A-Za-z0-9]/.test(password)) strength++;
+        return strength;
+    }
+    
+    function updatePasswordStrength() {
+        const password = newPassword.value;
+        const strength = checkPasswordStrength(password);
+        
+        // 移除之前的提示
+        const existingHint = newPassword.parentElement.querySelector('.password-strength');
+        if (existingHint) {
+            existingHint.remove();
+        }
+        
+        if (password.length > 0) {
+            const hint = document.createElement('div');
+            hint.className = 'password-strength mt-1';
+            
+            let strengthText = '';
+            let strengthClass = '';
+            
+            switch (strength) {
+                case 0:
+                case 1:
+                    strengthText = '密码强度：弱';
+                    strengthClass = 'text-danger';
+                    break;
+                case 2:
+                case 3:
+                    strengthText = '密码强度：中等';
+                    strengthClass = 'text-warning';
+                    break;
+                case 4:
+                case 5:
+                    strengthText = '密码强度：强';
+                    strengthClass = 'text-success';
+                    break;
+            }
+            
+            hint.innerHTML = `<small class="${strengthClass}"><i class="fas fa-shield-alt me-1"></i>${strengthText}</small>`;
+            newPassword.parentElement.appendChild(hint);
+        }
+    }
+    
+    function checkPasswordMatch() {
+        const password = newPassword.value;
+        const confirm = confirmPassword.value;
+        
+        // 移除之前的提示
+        const existingHint = confirmPassword.parentElement.querySelector('.password-match');
+        if (existingHint) {
+            existingHint.remove();
+        }
+        
+        if (confirm.length > 0) {
+            const hint = document.createElement('div');
+            hint.className = 'password-match mt-1';
+            
+            if (password === confirm) {
+                hint.innerHTML = '<small class="text-success"><i class="fas fa-check me-1"></i>密码匹配</small>';
+            } else {
+                hint.innerHTML = '<small class="text-danger"><i class="fas fa-times me-1"></i>密码不匹配</small>';
+            }
+            
+            confirmPassword.parentElement.appendChild(hint);
+        }
+    }
+    
+    if (newPassword) {
+        newPassword.addEventListener('input', updatePasswordStrength);
+    }
+    
+    if (confirmPassword) {
+        confirmPassword.addEventListener('input', checkPasswordMatch);
+        newPassword.addEventListener('input', checkPasswordMatch);
+    }
+    
+    // 表单提交验证
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const oldPass = document.getElementById('old_password').value;
+        const newPass1 = document.getElementById('new_password1').value;
+        const newPass2 = document.getElementById('new_password2').value;
+        
+        // 如果要修改密码，检查必填项
+        if (newPass1 || newPass2 || oldPass) {
+            if (!oldPass) {
+                e.preventDefault();
+                alert('请输入当前密码');
+                document.getElementById('old_password').focus();
+                return;
+            }
+            
+            if (!newPass1) {
+                e.preventDefault();
+                alert('请输入新密码');
+                document.getElementById('new_password1').focus();
+                return;
+            }
+            
+            if (newPass1 !== newPass2) {
+                e.preventDefault();
+                alert('两次输入的新密码不一致');
+                document.getElementById('new_password2').focus();
+                return;
+            }
+            
+            if (checkPasswordStrength(newPass1) < 2) {
+                if (!confirm('密码强度较弱，是否继续？')) {
+                    e.preventDefault();
+                    return;
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
